@@ -36,9 +36,13 @@ export class AuthController {
           authService.getRefreshTokenCookieOptions()
         );
         
+        // Also return refresh token in body for cross-origin compatibility
         res.status(200).json({
           success: true,
-          data: auth,
+          data: {
+            ...auth,
+            refreshToken,
+          },
         });
       } catch (error) {
         next(error);

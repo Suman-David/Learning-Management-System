@@ -10,6 +10,7 @@ export interface AuthResponse {
   user: User;
   accessToken: string;
   expiresIn: number;
+  refreshToken?: string;
 }
 
 export const authApi = {

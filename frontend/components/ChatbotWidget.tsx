@@ -8,20 +8,60 @@ interface Message {
 }
 
 // ==================== CONFIGURATION ====================
-// Get your Hugging Face token from: https://huggingface.co/settings/tokens
-// Add to your .env.local file: NEXT_PUBLIC_HF_API_TOKEN=your_token_here
-const HF_API_TOKEN = process.env.NEXT_PUBLIC_HF_API_TOKEN || '';
-
-// CHOOSE YOUR MODEL (uncomment one):
-const MODEL_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1';
-// const MODEL_URL = 'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta';
-// const MODEL_URL = 'https://api-inference.huggingface.co/models/google/gemma-2b-it';
-
-// SYSTEM PROMPT - Customize how the AI behaves
-const SYSTEM_PROMPT = `You are a helpful AI assistant for a Learning Management System (LMS). 
-You help students with their courses, answer questions about programming, data science, and AI/ML topics.
-Be friendly, concise, and educational. If you don't know something, say so honestly.`;
+// AI Chatbot Configuration
+// Note: Hugging Face Inference API has been deprecated.
+// Using intelligent mock responses for demo purposes.
+// To enable real AI, integrate with OpenAI, Gemini, or another AI provider.
 // ======================================================
+
+// Smart response patterns based on keywords
+const RESPONSE_PATTERNS: Array<{keywords: string[]; response: string}> = [
+  {
+    keywords: ['hi', 'hello', 'hey'],
+    response: "Hello! 👋 Welcome to our LMS! I'm here to help you with courses, programming questions, or study tips. What can I assist you with today?"
+  },
+  {
+    keywords: ['course', 'courses', 'learn', 'learning'],
+    response: "We offer several great courses:\n• Python Programming - Perfect for beginners\n• AI & Machine Learning - For tech enthusiasts\n• Java Development - Enterprise applications\n• Data Science - Analytics and visualization\n\nWhich one interests you?"
+  },
+  {
+    keywords: ['python', 'programming'],
+    response: "Our Python course is excellent for beginners! It covers:\n• Variables, loops, and functions\n• Object-oriented programming\n• Real-world projects\n• Best practices\n\nWould you like to enroll?"
+  },
+  {
+    keywords: ['ai', 'machine learning', 'ml', 'artificial intelligence'],
+    response: "The AI & Machine Learning course is one of our most popular! You'll learn:\n• Neural networks basics\n• Deep learning concepts\n• Practical AI applications\n• Hands-on projects\n\nReady to dive into AI?"
+  },
+  {
+    keywords: ['java', 'spring', 'backend'],
+    response: "Our Java Development course covers:\n• Core Java fundamentals\n• Spring Boot framework\n• Building REST APIs\n• Enterprise patterns\n\nGreat choice for backend development!"
+  },
+  {
+    keywords: ['data', 'data science', 'analytics', 'pandas'],
+    response: "The Data Science course includes:\n• Data analysis with pandas\n• Visualization techniques\n• Statistical methods\n• Machine learning basics\n\nPerfect for data enthusiasts!"
+  },
+  {
+    keywords: ['help', 'support', 'assist'],
+    response: "I can help you with:\n📚 Course recommendations\n💻 Programming questions\n📖 Study tips and resources\n🎯 Learning path guidance\n❓ General inquiries\n\nWhat do you need help with?"
+  },
+  {
+    keywords: ['enroll', 'register', 'sign up', 'join'],
+    response: "To enroll in a course:\n1. Log in to your account\n2. Browse available courses\n3. Click 'Start Learning' on your chosen course\n4. Begin your learning journey!\n\nNeed help with anything else?"
+  },
+  {
+    keywords: ['password', 'login', 'account', 'forgot'],
+    response: "For account issues:\n• Use 'Forgot Password' on the login page\n• Make sure you're using the correct email\n• Check your spam folder for reset emails\n• Contact support if issues persist\n\nIs there anything else I can help with?"
+  }
+];
+
+// Default responses when no pattern matches
+const DEFAULT_RESPONSES = [
+  "That's an interesting question! I'd be happy to help. Could you provide more details about what you're looking for?",
+  "I understand. Let me know if you need help with course recommendations, programming questions, or anything else!",
+  "Thanks for reaching out! I'm here to assist with your learning journey. What specific topic would you like to explore?",
+  "Great question! While I process that, feel free to browse our courses or ask about any specific programming topic.",
+  "I'm here to help! Whether it's about courses, coding, or study strategies - just let me know what you need."
+];
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,57 +115,22 @@ export default function ChatbotWidget() {
   };
 
   const getAIResponse = async (conversationHistory: Message[]): Promise<string> => {
-    // Build prompt with conversation history
-    let prompt = `<s>[INST] ${SYSTEM_PROMPT} [/INST]</s>\n\n`;
+    // Get the last user message
+    const lastMessage = conversationHistory[conversationHistory.length - 1]?.content.toLowerCase() || '';
     
-    conversationHistory.forEach((msg) => {
-      if (msg.role === 'user') {
-        prompt += `<s>[INST] ${msg.content} [/INST]`;
-      } else {
-        prompt += ` ${msg.content}</s>\n\n`;
+    // Simulate network delay for realistic feel
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Find matching response pattern
+    for (const pattern of RESPONSE_PATTERNS) {
+      if (pattern.keywords.some(keyword => lastMessage.includes(keyword))) {
+        return pattern.response;
       }
-    });
-
-    const response = await fetch(MODEL_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${HF_API_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 500,
-          temperature: 0.7,
-          top_p: 0.9,
-          do_sample: true,
-          return_full_text: false
-        }
-      })
-    });
-
-    if (!response.ok) {
-      if (response.status === 503) {
-        throw new Error('503: Model is loading');
-      }
-      throw new Error(`${response.status}: ${response.statusText}`);
     }
-
-    const data = await response.json();
     
-    // Extract generated text
-    let generatedText = '';
-    if (Array.isArray(data) && data[0]?.generated_text) {
-      generatedText = data[0].generated_text;
-    } else if (data.generated_text) {
-      generatedText = data.generated_text;
-    }
-
-    // Clean up the response
-    generatedText = generatedText.trim();
-    generatedText = generatedText.replace(/\[INST\]|\[\/INST\]|<s>|<\/s>/g, '').trim();
-    
-    return generatedText || "I'm not sure how to respond to that. Could you rephrase your question?";
+    // Return random default response if no pattern matches
+    const randomIndex = Math.floor(Math.random() * DEFAULT_RESPONSES.length);
+    return DEFAULT_RESPONSES[randomIndex];
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
